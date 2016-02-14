@@ -41,20 +41,50 @@ class goboard(object):
 		else:
 			self.put_white(pos, last)
 
-def trans(node):
-	import string
-	d = {}
-	for i,a in enumerate(list(string.ascii_lowercase)):
-		d[a] = i
-	color = node[1]
-	pos = (d[node[3]], d[node[4]])
-	return color,pos
+def get_move(s):
+	res = []
+	while True:
+		l = s.find('[')
+		if l == -1: break
+		r = s.find(']')
+		if r == -1: break
+		p = s[l+1:r]
+		if len(p) > 0:
+			res.append(p)
+		s = s[r+1:]
+	return res
 
-def ismove(node):
-	if len(node) != 6 or node[0]!= ';' or (node[1] != 'B' and node[1] != 'W'):
-		return False
+def get_color(s):
+	l = s.find('[')
+	if l == -1: return ''
+	else: return s[:l]
+	
+import string
+dict = {}
+for i,a in enumerate(list(string.ascii_lowercase)):
+	dict[a] = i
+
+def trans(node):
+	color = get_color(node)
+	p = get_move(node)
+	
+	ret = False
+	if color == 'B' or color == 'W':
+		ret = True
+	elif color == 'AB':
+		color = 'B'	
+		ret = True
+	elif color == 'AW':
+		color = 'W'	
+		ret = True
 	else:
-		return True 
+		pass
+
+	if ret == True and len(p) > 0:
+		pos = [(dict[x[0]], dict[x[1]]) for x in p]
+		return True, color, pos
+	else:
+		return False, '', []
 
 def test():
 	g = goboard()

@@ -21,16 +21,20 @@ def main():
 
 	move = []
 	while True:
-		move.append(str(c.node)) 
+		for m in map(str,c.node):
+			ok,col,p = go.trans(m)
+			if ok:
+				move.append((col,p))
+		
 		if c.atEnd: break
 		c.next()
 
-	move = filter(go.ismove, move)
 	print len(move), move
 	g = go.goboard()
 	for i,m in enumerate(move):
-		c,p = go.trans(m)
-		g.put_stone(c,p, i == len(move)-1)
+		c,p = m
+		for x in p:
+			g.put_stone(c,x, i == len(move)-1)
 	plt.show()
 	
 main()

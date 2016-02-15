@@ -10,31 +10,21 @@ def main():
 	if len(sys.argv) < 2:
 		print "usage: %s sgf_file" % sys.argv[0]
 		exit(1)
-	srcpath = sys.argv[1]
 
-	src = open(srcpath, 'r')
-	sgfdata = src.read()
-	col = SGFParser(sgfdata).parse()
-	cstr = str(col)
-	m = col[0].mainline()
+	src = open(sys.argv[1], 'r').read()
+	col = SGFParser(src).parse()
+#	cstr = str(col)
+#	m = col[0].mainline()
 	c = col.cursor()
 
 	move = []
 	while True:
-		for m in map(str,c.node):
-			ok,col,p = go.trans(m)
-			if ok:
-				move.append((col,p))
-		
+		move = move+[(col,p) for ok,col,p in map(go.trans, map(str,c.node)) if ok]
 		if c.atEnd: break
 		c.next()
 
-	print len(move), move
 	g = go.goboard()
-	for i,m in enumerate(move):
-		c,p = m
-		for x in p:
-			g.put_stone(c,x, i == len(move)-1)
+	[[g.put_stone(c,x,i==len(move)-1) for x in p] for i,(c,p) in enumerate(move)]
 	plt.show()
 	
 main()

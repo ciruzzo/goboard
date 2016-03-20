@@ -11,6 +11,13 @@ if __name__ == '__main__':
 
 	move = go.sgfmove(sys.argv[1])
 
+	if len(sys.argv) > 2:
+		num = int(sys.argv[2])
+	else:
+		num = len(move)
+
+	move = move[:num]
+
 	g = go.goboard()
 	[[g.put_stone(c,x,i==len(move)-1) for x in p] for i,(c,p) in enumerate(move)]
 	plt.show()

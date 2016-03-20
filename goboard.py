@@ -3,7 +3,6 @@ import matplotlib.patches as mpatches
 import copy
 import string
 import sys
-
 sys.path.append('sgflib1.0')
 from sgflib import *
 
@@ -15,7 +14,9 @@ for i,a in enumerate(list(string.ascii_lowercase)):
 class goboard(object):
 	""" taken from http://stackoverflow.com/questions/24563513/drawing-a-go-board-with-matplotlib"""
 	def __init__(self):
-		fig = plt.figure(figsize=[8,8], facecolor=(1,1,.8))
+#		print "board initialization"
+		boardcolor = (1,1,.8)
+		fig = plt.figure(figsize=[8,8], facecolor=boardcolor)
 		self.ax = fig.add_subplot(111, xticks=range(19), yticks=range(19), axis_bgcolor='none', position=[.1,.1,.8,.8])
 		self.ax.grid(color='k', linestyle='-', linewidth=1)
 		self.ax.xaxis.set_tick_params(bottom='off', top='off', labelbottom='off')
@@ -24,13 +25,76 @@ class goboard(object):
 		self.stone = {}
 		self.stone['B'] = mpatches.Circle((0,0), .45, facecolor='k', linewidth = 2, clip_on=False, zorder=10)
 		self.stone['W'] = mpatches.Circle((0,0), .45, facecolor='w', linewidth = 2, clip_on=False, zorder=10)
+		self.stone['T'] = mpatches.Circle((0,0), .45, facecolor=boardcolor, linewidth = 2, clip_on=False, zorder=10, edgecolor='g')
+
+		self.bd = [['e' for i in range(19)] for j in range(19)]
 
 	def put_stone(self, color, pos, last=False):
 		s = copy.copy(self.stone[color])
 		if last: s.set_edgecolor('r')
 		s.center = pos
 		self.ax.add_patch(s)
+		self.enter_stone(color,pos)
+		if color != 'T':
+			self.try_take(color,pos)
 
+	def print_status(self):
+		print self.bd
+	def enter_stone(self,color,pos):
+		self.bd[pos[0]][pos[1]] = color
+	def neighbor(self, p):
+		for vx,vy in [[1,0],[0,1],[-1,0],[0,-1]]:
+			x,y = p[0]+vx, p[1]+vy
+			if (x < 0 or y < 0) or (x > 18 or y > 18):
+				continue
+			yield [x,y]
+	def color(self, p):
+		return self.bd[p[0]][p[1]]
+	
+	def count_dame(self, p, visited, col):
+		res = 0
+		for q in self.neighbor(p):
+			cq = self.color(q)
+			if cq == col:
+				if visited[q[0]][q[1]] == False:
+					visited[q[0]][q[1]] = True
+					res += self.count_dame(q, visited, col)
+			elif cq == 'e':
+				res += 1
+		return res
+	
+	def take_stone(self, p, visited, col):
+		res = 0
+		for q in self.neighbor(p):
+			cq = self.color(q)
+			if cq == col:
+				if visited[q[0]][q[1]] == False:
+					visited[q[0]][q[1]] = True
+					res += self.take_stone(q, visited, col)
+			res += 1
+			self.put_stone('T', p)
+			self.enter_stone('e',p)
+		return res
+		
+	def try_take(self,color,p):
+		for q in self.neighbor(p):
+			# could be already taken, along with other stones	
+			cq = self.color(q)
+			if (cq == 'B' or cq == 'W') and (cq != color):
+				v = [[False for i in range(19)] for j in range(19)]
+				v[q[0]][q[1]] = True
+				dame = self.count_dame(q, v, cq)
+				if dame == 0:
+					taken = 0
+					for i in range(19):
+						for j in range(19):
+							if v[i][j]:
+								self.put_stone('T',[i,j])
+								self.enter_stone('e',[i,j])
+								taken += 1
+
+
+# returns move(point,color) from a file
 def sgfmove(file):
 	def get_move(s):
 		res = []
@@ -81,8 +145,43 @@ def sgfmove(file):
 		c.next()
 	return move
 
-if __name__ == '__main__':
-	color,pos =	trans(';B[ec]')
+def test2():
+	#move = [('B', [(16,0)]), ('W', [(16,0)]),('T', [(16,0)])] #, ('B', [(16, 0)]), ('W', [(16,0)])]
+	move = [('B', [(16,0)]), ('T', [(16,0)]), ('B', [(16,0)])]
 	g = goboard()
-	g.put_stone(color, pos)
+	for c,p in move:
+		[g.put_stone(c,x) for x in p]
 	plt.show()
+	
+
+def test(move, point, shouldbe):
+	g = goboard()
+	for c,p in move:
+		[g.put_stone(c,x) for x in p]
+		print p, g.color(p[0])
+	for i in range(4):
+		for j in range(4):
+			print i,j,g.bd[i][j]
+	
+	v = [[False for i in range(19)] for j in range(19)]
+	v[point[0]][point[1]] = True
+	
+	dame = g.count_dame(point, v, 'B')
+	print "dame for", point, dame , "should be", shouldbe
+
+	if dame == 0:
+		v = [[False for i in range(19)] for j in range(19)]
+		v[point[0]][point[1]] = True
+		g.take_stone(point, v, 'B')
+	plt.show()
+
+if __name__ == '__main__':
+#	move = [('B', [(16,0)]), ('B', [(16, 3)]), ('W', [(3, 15)]), ('B', [(2, 3)]), ('W', [(15, 15)]), ('B', [(16, 13)]), ('W', [(13, 16)]), ('B', [(15, 9)]), ('W', [(13, 3)]), ('B', [(15, 2)]), ('W', [(4, 3)])]
+#	move1, shouldbe = [('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(2,2)]), ('W',[(3,0)]),('W', [(3,1)])], 1
+#	move2, shouldbe = [('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(3,0)]),('W', [(3,1)])], 2
+
+	move3, shouldbe = [('W',[(0,0)]), ('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(2,2)]), ('W',[(3,0)]),('W', [(3,1)])], 0
+
+	test(move3, (1,0), shouldbe)
+#	test2()
+

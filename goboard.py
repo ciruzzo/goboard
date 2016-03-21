@@ -6,7 +6,7 @@ import sys
 sys.path.append('sgflib1.0')
 from sgflib import *
 
-# abc to 123 map
+# abc... to 123... map
 dict = {}
 for i,a in enumerate(list(string.ascii_lowercase)):
 	dict[a] = i
@@ -14,7 +14,6 @@ for i,a in enumerate(list(string.ascii_lowercase)):
 class goboard(object):
 	""" taken from http://stackoverflow.com/questions/24563513/drawing-a-go-board-with-matplotlib"""
 	def __init__(self):
-#		print "board initialization"
 		boardcolor = (1,1,.8)
 		fig = plt.figure(figsize=[8,8], facecolor=boardcolor)
 		self.ax = fig.add_subplot(111, xticks=range(19), yticks=range(19), axis_bgcolor='none', position=[.1,.1,.8,.8])
@@ -28,6 +27,9 @@ class goboard(object):
 		self.stone['T'] = mpatches.Circle((0,0), .45, facecolor=boardcolor, linewidth = 2, clip_on=False, zorder=10, edgecolor='g')
 
 		self.bd = [['e' for i in range(19)] for j in range(19)]
+		self.take = {}
+		self.take['B'] = 0
+		self.take['W'] = 0
 
 	def put_stone(self, color, pos, last=False):
 		s = copy.copy(self.stone[color])
@@ -36,7 +38,9 @@ class goboard(object):
 		self.ax.add_patch(s)
 		self.enter_stone(color,pos)
 		if color != 'T':
-			self.try_take(color,pos)
+			self.take[color] += self.try_take(color,pos)
+		if last:
+			print "agehama: black %d, white %d" % (self.take['B'], self.take['W'])
 
 	def print_status(self):
 		print self.bd
@@ -45,7 +49,7 @@ class goboard(object):
 	def neighbor(self, p):
 		for vx,vy in [[1,0],[0,1],[-1,0],[0,-1]]:
 			x,y = p[0]+vx, p[1]+vy
-			if (x < 0 or y < 0) or (x > 18 or y > 18):
+			if x < 0 or y < 0 or x > 18 or y > 18:
 				continue
 			yield [x,y]
 	def color(self, p):
@@ -77,6 +81,7 @@ class goboard(object):
 		return res
 		
 	def try_take(self,color,p):
+		taken = 0
 		for q in self.neighbor(p):
 			# could be already taken, along with other stones	
 			cq = self.color(q)
@@ -85,14 +90,13 @@ class goboard(object):
 				v[q[0]][q[1]] = True
 				dame = self.count_dame(q, v, cq)
 				if dame == 0:
-					taken = 0
 					for i in range(19):
 						for j in range(19):
 							if v[i][j]:
 								self.put_stone('T',[i,j])
 								self.enter_stone('e',[i,j])
 								taken += 1
-
+		return taken
 
 # returns move(point,color) from a file
 def sgfmove(file):
@@ -145,24 +149,11 @@ def sgfmove(file):
 		c.next()
 	return move
 
-def test2():
-	#move = [('B', [(16,0)]), ('W', [(16,0)]),('T', [(16,0)])] #, ('B', [(16, 0)]), ('W', [(16,0)])]
-	move = [('B', [(16,0)]), ('T', [(16,0)]), ('B', [(16,0)])]
-	g = goboard()
-	for c,p in move:
-		[g.put_stone(c,x) for x in p]
-	plt.show()
-	
-
 def test(move, point, shouldbe):
 	g = goboard()
 	for c,p in move:
 		[g.put_stone(c,x) for x in p]
-		print p, g.color(p[0])
-	for i in range(4):
-		for j in range(4):
-			print i,j,g.bd[i][j]
-	
+
 	v = [[False for i in range(19)] for j in range(19)]
 	v[point[0]][point[1]] = True
 	
@@ -176,12 +167,9 @@ def test(move, point, shouldbe):
 	plt.show()
 
 if __name__ == '__main__':
-#	move = [('B', [(16,0)]), ('B', [(16, 3)]), ('W', [(3, 15)]), ('B', [(2, 3)]), ('W', [(15, 15)]), ('B', [(16, 13)]), ('W', [(13, 16)]), ('B', [(15, 9)]), ('W', [(13, 3)]), ('B', [(15, 2)]), ('W', [(4, 3)])]
-#	move1, shouldbe = [('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(2,2)]), ('W',[(3,0)]),('W', [(3,1)])], 1
+#	move, shouldbe = [('B', [(16,0)]), ('B', [(16, 3)]), ('W', [(3, 15)]), ('B', [(2, 3)]), ('W', [(15, 15)]), ('B', [(16, 13)]), ('W', [(13, 16)]), ('B', [(15, 9)]), ('W', [(13, 3)]), ('B', [(15, 2)]), ('W', [(4, 3)])], 0
+	move1, shouldbe = [('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(2,2)]), ('W',[(3,0)]),('W', [(3,1)])], 1
 #	move2, shouldbe = [('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(3,0)]),('W', [(3,1)])], 2
 
-	move3, shouldbe = [('W',[(0,0)]), ('B',[(1,0)]),('W',[(1,1)]),('B',[(2,0)]),('B',[(2,1)]),('W',[(2,2)]), ('W',[(3,0)]),('W', [(3,1)])], 0
-
-	test(move3, (1,0), shouldbe)
-#	test2()
+	test(move1, (1,0), shouldbe)
 
